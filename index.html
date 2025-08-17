@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulir Izin Pemutaran Ulang CCTV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Library untuk Tanda Tangan Digital -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <!-- Library untuk membuat PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .signature-canvas {
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.5rem;
+            cursor: crosshair;
+        }
+        /* Custom styles untuk tampilan cetak di PDF */
+        #form-to-print {
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-5xl">
+        <!-- Bagian Formulir yang akan di-print ke PDF -->
+        <div id="form-to-print" class="bg-white p-8 md:p-10">
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-800">FORMULIR PLAYBACK/PERMINTAAN DATA CCTV</h1>
+                <p class="text-lg text-gray-600">JAYANTI 1</p>
+            </div>
+            
+            <form id="permissionForm" class="space-y-6">
+                <!-- Informasi Pemohon -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="nama" class="block text-sm font-medium text-gray-700 mb-1">Nama Pemohon</label>
+                        <input type="text" id="nama" name="nama" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                     <div>
+                        <label for="nik" class="block text-sm font-medium text-gray-700 mb-1">NIK</label>
+                        <input type="text" id="nik" name="nik" required pattern="\d*" title="Hanya masukkan angka" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="departemen" class="block text-sm font-medium text-gray-700 mb-1">Departemen / Bagian</label>
+                        <input type="text" id="departemen" name="departemen" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="tanggal" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Permohonan</label>
+                        <input type="date" id="tanggal" name="tanggal" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <!-- Jenis Permintaan -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Permintaan</label>
+                    <div class="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0" id="request-type-group">
+                        <div class="flex items-center">
+                            <input id="req-playback" name="jenis_permintaan" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <label for="req-playback" class="ml-2 block text-sm text-gray-900">Playback CCTV</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="req-data" name="jenis_permintaan" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <label for="req-data" class="ml-2 block text-sm text-gray-900">Permintaan Data</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="alasan" class="block text-sm font-medium text-gray-700 mb-1">Alasan Kebutuhan</label>
+                    <textarea id="alasan" name="alasan" rows="4" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+
+                <!-- Area Tanda Tangan -->
+                <div class="pt-4">
+                    <p class="text-center text-sm text-gray-600 mb-4">Dengan ini saya menyatakan bahwa informasi yang diberikan adalah benar dan dapat dipertanggungjawabkan.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <!-- TTD Pemohon -->
+                        <div class="text-center">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Pemohon</label>
+                            <div class="bg-gray-50 rounded-lg p-2">
+                                <canvas id="signature-pad-applicant" class="signature-canvas w-full h-40"></canvas>
+                            </div>
+                            <button type="button" data-action="clear" data-target="applicant" class="mt-2 text-sm text-indigo-600 hover:text-indigo-800">Ulangi</button>
+                        </div>
+                        <!-- TTD Mengetahui -->
+                        <div class="text-center">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Mengetahui<span class="text-gray-500 font-normal">(OPERATOR CCTV)</span></label>
+                            <div class="bg-gray-50 rounded-lg p-2">
+                                <canvas id="signature-pad-known" class="signature-canvas w-full h-40"></canvas>
+                            </div>
+                            <button type="button" data-action="clear" data-target="known" class="mt-2 text-sm text-indigo-600 hover:text-indigo-800">Ulangi</button>
+                        </div>
+                        <!-- TTD Menyetujui -->
+                        <div class="text-center">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Menyetujui (DH/SH IRGA)</label>
+                            <div class="bg-gray-50 rounded-lg p-2">
+                                <canvas id="signature-pad-approver" class="signature-canvas w-full h-40"></canvas>
+                            </div>
+                            <button type="button" data-action="clear" data-target="approver" class="mt-2 text-sm text-indigo-600 hover:text-indigo-800">Ulangi</button>
+                        </div>
+                    </div>
+                </div>
+                 <div id="error-message" class="hidden text-center text-red-600 font-medium p-3 bg-red-100 rounded-md"></div>
+            </form>
+        </div>
+        
+        <!-- Tombol Aksi di luar area print -->
+        <div class="bg-white px-8 md:px-10 pb-8 pt-4 text-center">
+            <button id="generatePdfBtn" class="w-full max-w-xs bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105">
+                Buat PDF & Kirim
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal untuk panduan pengiriman -->
+    <div id="dispatch-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center transform transition-all scale-95 opacity-0" id="modal-content">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">PDF Berhasil Dibuat!</h2>
+            <p class="text-gray-600 mb-6">Ikuti 2 langkah mudah berikut untuk mengirim formulir.</p>
+            
+            <div class="space-y-4">
+                <a id="download-pdf-btn" href="#" download="Formulir-Permintaan-Data.pdf" class="block w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-green-700 transition-transform transform hover:scale-105">
+                    <span class="text-sm font-normal block -mb-1">Langkah 1</span>
+                    Unduh Formulir PDF
+                </a>
+                
+                <!-- Opsi Kirim WhatsApp -->
+                <div class="pt-2">
+                    <p class="text-sm text-gray-500 mb-2">Langkah 2: Pilih Tujuan Kirim</p>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <a id="send-whatsapp-btn-1" href="#" target="_blank" class="flex-1 block bg-gray-800 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-black transition-transform transform hover:scale-105">
+                            Kirim ke SH IRGA
+                        </a>
+                        <a id="send-whatsapp-btn-2" href="#" target="_blank" class="flex-1 block bg-gray-800 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-black transition-transform transform hover:scale-105">
+                            Kirim ke DH IRGA
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="close-modal-btn" class="mt-8 text-sm text-gray-500 hover:text-gray-700">Tutup</button>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Inisialisasi Elemen
+        const canvasApplicant = document.getElementById('signature-pad-applicant');
+        const canvasKnown = document.getElementById('signature-pad-known');
+        const canvasApprover = document.getElementById('signature-pad-approver');
+        const form = document.getElementById('permissionForm');
+        const generateBtn = document.getElementById('generatePdfBtn');
+        const errorMessage = document.getElementById('error-message');
+        
+        // Modal elements
+        const modal = document.getElementById('dispatch-modal');
+        const modalContent = document.getElementById('modal-content');
+        const downloadBtn = document.getElementById('download-pdf-btn');
+        const whatsappBtn1 = document.getElementById('send-whatsapp-btn-1');
+        const whatsappBtn2 = document.getElementById('send-whatsapp-btn-2');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        // Nomor WhatsApp Tujuan
+        const waNumber1 = '62895610447157';
+        const waNumber2 = '6288213183669';
+
+        // Inisialisasi Signature Pad
+        const signaturePadApplicant = new SignaturePad(canvasApplicant, { backgroundColor: 'rgb(249, 250, 251)' });
+        const signaturePadKnown = new SignaturePad(canvasKnown, { backgroundColor: 'rgb(249, 250, 251)' });
+        const signaturePadApprover = new SignaturePad(canvasApprover, { backgroundColor: 'rgb(249, 250, 251)' });
+
+        // Fungsi untuk menyesuaikan ukuran canvas
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            [canvasApplicant, canvasKnown, canvasApprover].forEach(canvas => {
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext('2d').scale(ratio, ratio);
+            });
+            signaturePadApplicant.clear();
+            signaturePadKnown.clear();
+            signaturePadApprover.clear();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Fungsi untuk membersihkan tanda tangan
+        document.querySelectorAll('[data-action="clear"]').forEach(button => {
+            button.addEventListener('click', () => {
+                const target = button.getAttribute('data-target');
+                if (target === 'applicant') signaturePadApplicant.clear();
+                else if (target === 'known') signaturePadKnown.clear();
+                else if (target === 'approver') signaturePadApprover.clear();
+            });
+        });
+
+        // Fungsi untuk menampilkan pesan error
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+        
+        function showModal() {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+            }, 50);
+        }
+
+        function hideModal() {
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+        
+        closeModalBtn.addEventListener('click', hideModal);
+
+        generateBtn.addEventListener('click', async (event) => {
+            event.preventDefault();
+            hideError();
+
+            // 1. Validasi Form
+            const isRequestTypeChecked = document.querySelector('input[name="jenis_permintaan"]:checked');
+            if (!form.checkValidity()) {
+                showError('Mohon lengkapi semua kolom yang wajib diisi.');
+                form.reportValidity();
+                return;
+            }
+            if (!isRequestTypeChecked) {
+                showError('Mohon pilih minimal satu Jenis Permintaan.');
+                return;
+            }
+            if (signaturePadApplicant.isEmpty()) {
+                showError('Tanda tangan Pemohon tidak boleh kosong.');
+                return;
+            }
+            if (signaturePadKnown.isEmpty()) {
+                showError('Tanda tangan Mengetahui tidak boleh kosong.');
+                return;
+            }
+
+            // 2. Ubah state tombol menjadi loading
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Memproses...';
+            generateBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            try {
+                // 3. Ambil data TTD sebagai gambar & siapkan untuk di-print
+                const signaturePads = [
+                    { pad: signaturePadApplicant, canvas: canvasApplicant },
+                    { pad: signaturePadKnown, canvas: canvasKnown },
+                    { pad: signaturePadApprover, canvas: canvasApprover }
+                ];
+
+                signaturePads.forEach(item => {
+                    if (!item.pad.isEmpty()) {
+                        const data = item.pad.toDataURL('image/png');
+                        const img = document.createElement('img');
+                        img.src = data;
+                        img.className = 'absolute inset-0 w-full h-full';
+                        item.canvas.parentElement.style.position = 'relative';
+                        item.canvas.parentElement.appendChild(img);
+                        item.canvas.style.visibility = 'hidden';
+                        item.imgElement = img; // Simpan referensi untuk dihapus nanti
+                    }
+                });
+                
+                // 4. Konversi area formulir menjadi canvas
+                const formCanvas = await html2canvas(document.getElementById('form-to-print'), {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                });
+                
+                // Kembalikan visibilitas canvas dan hapus gambar sementara
+                signaturePads.forEach(item => {
+                    if (item.imgElement) {
+                        item.canvas.style.visibility = 'visible';
+                        item.imgElement.remove();
+                    }
+                });
+
+                const imgData = formCanvas.toDataURL('image/png');
+
+                // 5. Buat file PDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const imgProps = pdf.getImageProperties(imgData);
+                const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                
+                const margin = 10;
+                pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - (margin * 2), imgHeight);
+
+                // 6. Siapkan link download, pesan WA, dan tampilkan modal
+                const pdfBlob = pdf.output('blob');
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+                downloadBtn.href = pdfUrl;
+                
+                const nama = document.getElementById('nama').value;
+                const bagian = document.getElementById('departemen').value;
+                const waMessageText = `Yth Bpk/Ibu,\n\nNama: ${nama}\nBagian: ${bagian}\n\ningin meminta izin playback/permintaan data CCTV, berikut terlampir formulir permohonan izin, terimakasih`;
+                const waMessage = encodeURIComponent(waMessageText);
+                
+                whatsappBtn1.href = `https://api.whatsapp.com/send?phone=${waNumber1}&text=${waMessage}`;
+                whatsappBtn2.href = `https://api.whatsapp.com/send?phone=${waNumber2}&text=${waMessage}`;
+                
+                showModal();
+
+            } catch (error) {
+                console.error("Gagal membuat PDF:", error);
+                showError('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.');
+            } finally {
+                // 7. Kembalikan state tombol ke normal
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Buat PDF & Kirim';
+                generateBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        });
+    });
+    </script>
+</body>
+</html>
